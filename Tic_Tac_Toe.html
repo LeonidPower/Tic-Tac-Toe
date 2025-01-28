@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cool Tic Tac Toe</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: linear-gradient(45deg, #1a1a1a, #4a4a4a);
+            color: white;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            background-color: #333;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #444;
+            border: none;
+            border-radius: 10px;
+            font-size: 60px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .cell:hover {
+            background-color: #555;
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: #ff4757;
+        }
+
+        .cell.o {
+            color: #2ed573;
+        }
+
+        .status {
+            margin: 20px 0;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .reset-btn {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #2ed573;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .reset-btn:hover {
+            transform: scale(1.1);
+            background-color: #26af5f;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .win {
+            animation: fadeIn 0.5s ease;
+            background-color: #2ed57333 !important;
+        }
+
+        #confetti{
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="status" id="status">Player X's turn</div>
+    <div class="board" id="board">
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+        <button class="cell" data-cell></button>
+    </div>
+    <button class="reset-btn" id="resetBtn">Reset Game</button>
+    <canvas id="confetti"></canvas>
+
+    <script>
+        const X_CLASS = 'x';
+        const O_CLASS = 'o';
+        const WINNING_COMBINATIONS = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+            [0, 4, 8], [2, 4, 6] // Diagonals
+        ];
+
+        const cellElements = document.querySelectorAll('[data-cell]');
+        const board = document.getElementById('board');
+        const statusText = document.getElementById('status');
+        const resetButton = document.getElementById('resetBtn');
+        const confettiCanvas = document.getElementById('confetti');
+        let oTurn = false;
+        let gameActive = true;
+
+        startGame();
+
+        resetButton.addEventListener('click', startGame);
+
+        function startGame() {
+            gameActive = true;
+            oTurn = false;
+            cellElements.forEach(cell => {
+                cell.classList.remove(X_CLASS);
+                cell.classList.remove(O_CLASS);
+                cell.classList.remove('win');
+                cell.textContent = '';
+                cell.removeEventListener('click', handleClick);
+                cell.addEventListener('click', handleClick, { once: true });
+            });
+            statusText.textContent = "Player X's turn";
+            confettiCanvas.getContext('2d').clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+        }
+
+        function handleClick(e) {
+            const cell = e.target;
+            if (!gameActive || cell.classList.contains(X_CLASS) || cell.classList.contains(O_CLASS)) return;
+
+            const currentClass = oTurn ? O_CLASS : X_CLASS;
+            placeMark(cell, currentClass);
+            
+            if (checkWin(currentClass)) {
+                endGame(false);
+            } else if (isDraw()) {
+                endGame(true);
+            } else {
+                swapTurns();
+            }
+        }
+
+        function placeMark(cell, currentClass) {
+            cell.classList.add(currentClass);
+            cell.textContent = currentClass.toUpperCase();
+        }
+
+        function swapTurns() {
+            oTurn = !oTurn;
+            statusText.textContent = `Player ${oTurn ? 'O' : 'X'}'s turn`;
+        }
+
+        function checkWin(currentClass) {
+            return WINNING_COMBINATIONS.some(combination => {
+                return combination.every(index => {
+                    return cellElements[index].classList.contains(currentClass);
+                });
+            });
+        }
+
+        function endGame(draw) {
+            gameActive = false;
+            if (draw) {
+                statusText.textContent = "Game Draw!";
+            } else {
+                statusText.textContent = `Player ${oTurn ? 'O' : 'X'} Wins!`;
+                if (!oTurn) createConfetti();
+                highlightWinningCombination();
+            }
+        }
+
+        function isDraw() {
+            return [...cellElements].every(cell => {
+                return cell.classList.contains(X_CLASS) || cell.classList.contains(O_CLASS);
+            });
+        }
+
+        function highlightWinningCombination() {
+            const currentClass = oTurn ? O_CLASS : X_CLASS;
+            WINNING_COMBINATIONS.forEach(combination => {
+                if (combination.every(index => cellElements[index].classList.contains(currentClass))) {
+                    combination.forEach(index => cellElements[index].classList.add('win'));
+                }
+            });
+        }
+
+        function createConfetti() {
+            const canvas = confettiCanvas;
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const particles = [];
+            for (let i = 0; i < 150; i++) {
+                particles.push({
+                    x: canvas.width / 2,
+                    y: canvas.height / 2,
+                    radius: Math.random() * 5 + 2,
+                    color: `hsl(${Math.random() * 360}, 100%, 50%)`,
+                    velocity: {
+                        x: (Math.random() - 0.5) * 10,
+                        y: (Math.random() - 0.5) * 10
+                    }
+                });
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles.forEach((particle, index) => {
+                    particle.x += particle.velocity.x;
+                    particle.y += particle.velocity.y;
+                    particle.velocity.y += 0.1;
+
+                    ctx.beginPath();
+                    ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = particle.color;
+                    ctx.fill();
+
+                    if (particle.y > canvas.height) {
+                        particles.splice(index, 1);
+                    }
+                });
+
+                if (particles.length > 0) {
+                    requestAnimationFrame(animate);
+                }
+            }
+
+            animate();
+        }
+    </script>
+</body>
+</html>
